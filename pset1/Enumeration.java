@@ -41,7 +41,7 @@ class Enumeration {
     
     public static void main(String[] args) {
         for (Months m : Months.values()){
-            System.out.println (m + " 2026 has " + daysInMonth(m, 2400) + " days!");
+            System.out.println (m + " 2400 has " + daysInMonth(m, 2400) + " days!");
         }
     }
 }
