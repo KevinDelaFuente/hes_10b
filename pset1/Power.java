@@ -1,5 +1,3 @@
-package pset1;
-
 // Class to compute x^n using recursion with optimization for even exponents
 class Power {
 

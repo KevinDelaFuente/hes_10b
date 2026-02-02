@@ -1,5 +1,3 @@
-package pset1;
-
 enum Months { JAN, FEB, MAR, APR, MAY, JUN, JUL, AUG,
  SEP, OCT, NOV, DEC} ;
 // Class to determine number of days in a month, accounting for leap years

@@ -1,5 +1,3 @@
-package pset1;
-
 // Class to print a recursive "[]" pattern
 public class RecTriangle {
 
