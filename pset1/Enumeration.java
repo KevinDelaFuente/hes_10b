@@ -2,7 +2,7 @@ package pset1;
 
 enum Months { JAN, FEB, MAR, APR, MAY, JUN, JUL, AUG,
  SEP, OCT, NOV, DEC} ;
-
+// Class to determine number of days in a month, accounting for leap years
 class Enumeration {
 
     public static int daysInMonth (Months m, int year) {
@@ -39,6 +39,7 @@ class Enumeration {
         }
     }
     
+    // Test for year 2400, which is a leap year
     public static void main(String[] args) {
         for (Months m : Months.values()){
             System.out.println (m + " 2400 has " + daysInMonth(m, 2400) + " days!");

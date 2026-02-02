@@ -1,5 +1,6 @@
 package pset1;
 
+// Class to print a recursive "[]" pattern
 public class RecTriangle {
 
     public static void main (String[] args)
@@ -8,6 +9,7 @@ public class RecTriangle {
     }
 
     public static void printTriangle (int s){
+        // By printing first, the drill down of s happens after
         for (int i = 0; i < s; i++){
             System.out.print( "[]");
         }
