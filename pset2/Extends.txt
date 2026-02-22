@@ -1,0 +1,29 @@
+(a) class Oven extends Kitchen
+>> Invalid. This is component, Kitchen is more like room or location
+
+(b) class Guitar extends Instrument
+>> Valid.
+
+(c) class Person extends Employee
+>> Invalid. Not all persons are employees
+
+(d) class FriedEgg extends Food
+>> Valid
+
+(e) class Beagle extends Dog
+>> Valid
+
+(f) class Canoe extends Boat
+>> Valid
+
+(g) class Container extends Jar
+>> Invalid. Container is broader, not all containers are jars
+
+(h) class Beverage extends Martini
+>> Invalid, Beverage is broader, not all beverages are martinis
+
+(i) class Metal extends Titanium
+>> Invalid. Metal is broader, no all metals are Titanium
+
+(j) class RollingStones extends RockBand
+>> Valid. 

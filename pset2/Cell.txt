@@ -1,0 +1,11 @@
+✦ Cell c = new BloodCell();
+>> Legal
+
+✦ Cell c = new RedBloodCell();
+>> Legal
+
+✦ BloodCell c = new RedBloodCell();
+>> Legal
+
+✦ RedBloodCell c = new BloodCell();
+>> Illegal. container c is of a child class: RedBloodCell 
