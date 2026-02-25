@@ -28,7 +28,14 @@ public class BarCode {
 
     // Methods
     private String encode(String aZipCode) {
-        return "";
+        if (isValidZipCode(aZipCode)){
+            String encoding = "|";
+            for (int i =0; i < aZipCode.length(); i++){
+                encoding += digitToCode((int)aZipCode.charAt(i)-'0');
+            }
+            encoding += digitToCode(getCheckDigit(Integer.parseInt(aZipCode)))+"|";
+            return encoding;  
+        } else return "";
     }
 
     private String decode(String aBarCode){
@@ -36,7 +43,8 @@ public class BarCode {
     }
 
     private boolean isValidZipCode(String aZipCode){
-        return false;
+        int number = Integer.parseInt(aZipCode);
+        return ((number >= 1) & (number <= 99999) & (aZipCode.length() == 5));
     }
 
     private boolean isValidBarCode(String aBarCode){
@@ -44,11 +52,30 @@ public class BarCode {
     }
 
     private int getCheckDigit(int anInt) {
-        return 0;
+        int sum = 0;
+        do {
+            sum += anInt % 10;
+            anInt /= 10;
+        } while (anInt > 0);
+        return (10 - (sum % 10))%10;
     }
 
     private String digitToCode(int aDigit) {
-        return "";
+        return (
+            switch (aDigit) {
+                case 1 -> ":::||";
+                case 2 -> "::|:|";
+                case 3 -> "::||:";
+                case 4 -> ":|::|";
+                case 5 -> ":|:|:";
+                case 6 -> ":||::";
+                case 7 -> "|:::|";
+                case 8 -> "|::|:";
+                case 9 -> "|:|::";
+                case 0 -> "||:::";
+                default -> throw new IllegalStateException("Invalid input to digitToCode: " + aDigit);
+            }
+        );
     }
     
     private int codeToDigit(String aCode){
