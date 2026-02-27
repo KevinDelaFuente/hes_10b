@@ -39,7 +39,12 @@ public class BarCode {
     }
 
     private String decode(String aBarCode){
-        return "";
+        String decoding = "";
+        if (isValidBarCode(aBarCode)){
+            for(int i = 1; i <= 5; i++){
+                decoding += codeToDigit(aBarCode.substring((5*i)-4, (5*i)+1));
+            }
+        } return decoding;
     }
 
     private boolean isValidZipCode(String aZipCode){
@@ -48,7 +53,13 @@ public class BarCode {
     }
 
     private boolean isValidBarCode(String aBarCode){
-        return false;
+        if (aBarCode == null || aBarCode.length() != 32) return false;
+        if (aBarCode.charAt(0) != '|' || aBarCode.charAt(31) != '|') return false;
+        for (int i = 0; i < aBarCode.length(); i++) {
+            char c = aBarCode.charAt(i);
+            if (c != '|' && c != ':') return false;
+        }
+        return true;
     }
 
     private int getCheckDigit(int anInt) {
@@ -79,6 +90,20 @@ public class BarCode {
     }
     
     private int codeToDigit(String aCode){
-        return 0;
+        return (
+            switch (aCode) {
+                case ":::||" -> 1;
+                case "::|:|" -> 2;
+                case "::||:" -> 3;
+                case ":|::|" -> 4;
+                case ":|:|:" -> 5;
+                case ":||::" -> 6;
+                case "|:::|" -> 7;
+                case "|::|:" -> 8;
+                case "|:|::" -> 9;
+                case "||:::" -> 0;
+                default -> throw new IllegalStateException("Invalid input to codeToDigit: " + aCode);
+            }
+        );
     }
 }
