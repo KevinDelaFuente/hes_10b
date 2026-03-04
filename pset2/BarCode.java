@@ -7,14 +7,20 @@ public class BarCode {
     public BarCode(String input){
         // if lenght of input is 5, then it is a zip code, else it is a bar code
         if (input.length() == 5){
+            if (!isValidZipCode(input)) {
+                throw new IllegalArgumentException("Illegal zip code value: " + input);
+            } else{
             this.myZipCode = input;
             this.myBarCode = encode(input);
+            }
         } else {
+            if(!isValidBarCode(input)){
+                throw new IllegalArgumentException("Illegal bar code value: " + input);
+            } else{
             this.myZipCode = decode(input);
             this.myBarCode = input;
+            }
         }
-
-
     }
 
     // Accessors
@@ -48,8 +54,11 @@ public class BarCode {
     }
 
     private boolean isValidZipCode(String aZipCode){
+        if (!aZipCode.matches("[0-9]{5}")) {
+            return false;
+        }
         int number = Integer.parseInt(aZipCode);
-        return ((number >= 1) & (number <= 99999) & (aZipCode.length() == 5));
+        return (number >= 1 && number <= 99999);
     }
 
     private boolean isValidBarCode(String aBarCode){
