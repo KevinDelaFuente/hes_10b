@@ -1,0 +1,8 @@
+static void example(){
+    String text = null;
+    System.out.println(text.lenght());
+}
+
+
+// It makes sense to keep NullPointerException as unchecked because it represets a flaw in the code logic. 
+// Unchecked exceptions need to be fixed via code/logic, checked exceptions should be handled programatically

@@ -1,3 +1,7 @@
+/**
+ * BarCode represents a US postal bar code and provides methods to encode a zip code to a bar code,
+ * decode a bar code to a zip code, and validate both formats. It throws exceptions for invalid input.
+ */
 public class BarCode {
     // Data Fields
     private String myZipCode;
@@ -33,6 +37,7 @@ public class BarCode {
     }
 
     // Methods
+    // Encodes a zip code as a bar code string.
     private String encode(String aZipCode) {
         if (isValidZipCode(aZipCode)){
             String encoding = "|";
@@ -44,6 +49,7 @@ public class BarCode {
         } else return "";
     }
 
+    // Decodes a bar code string to a zip code.
     private String decode(String aBarCode){
         String decoding = "";
         if (isValidBarCode(aBarCode)){
@@ -53,6 +59,7 @@ public class BarCode {
         } return decoding;
     }
 
+    // Checks if a zip code string is valid (5 digits, 1-99999).
     private boolean isValidZipCode(String aZipCode){
         if (!aZipCode.matches("[0-9]{5}")) {
             return false;
@@ -61,6 +68,7 @@ public class BarCode {
         return (number >= 1 && number <= 99999);
     }
 
+    // Checks if a bar code string is valid.
     private boolean isValidBarCode(String aBarCode){
         if (aBarCode == null || aBarCode.length() != 32) return false;
         if (aBarCode.charAt(0) != '|' || aBarCode.charAt(31) != '|') return false;
@@ -71,6 +79,7 @@ public class BarCode {
         return true;
     }
 
+    // Calculates the check digit for a zip code.
     private int getCheckDigit(int anInt) {
         int sum = 0;
         do {
@@ -80,6 +89,7 @@ public class BarCode {
         return (10 - (sum % 10))%10;
     }
 
+    // Converts a digit to its bar code string representation.
     private String digitToCode(int aDigit) {
         return (
             switch (aDigit) {
@@ -98,6 +108,7 @@ public class BarCode {
         );
     }
     
+    // Converts a bar code string to its digit value.
     private int codeToDigit(String aCode){
         return (
             switch (aCode) {
