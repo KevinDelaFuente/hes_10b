@@ -1,7 +1,13 @@
+/*
+ * Prob4.java
+ * 
+ * This program demonstrates how to handle exceptions when performing division of two integers.
+ * 
+ */
+
 import java.util.Scanner;
 import java.util.InputMismatchException;
 
-// This program demonstrates how to handle exceptions when performing division of two integers.
 class Prob4 {
     public static void main(String [] args){
         Scanner keyboard = new Scanner (System.in);
