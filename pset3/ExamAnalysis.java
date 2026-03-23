@@ -3,11 +3,9 @@
  * 
  * This program analyzes multiple-choice exam results by comparing student responses
  * to the correct answer key. It provides two analysis outputs:
- *   1. Student Analysis - showing correct, incorrect, and blank answers for each student
- *   2. Question Analysis - showing the distribution of responses for each question
+ *   >> Student Analysis: showing correct, incorrect, and blank answers for each student
+ *   >> Question Analysis: showing the distribution of responses for each question
  * 
- * The program validates all inputs and handles errors gracefully by prompting the user
- * to re-enter invalid data or skipping malformed lines in the data file.
  */
 
 import java.io.*;
@@ -15,7 +13,7 @@ import java.util.ArrayList;
 import java.util.Scanner;
 
 class ExamAnalysis {
-    // Constants
+    // Constant to be changed if number of exams questions changes, used for validation and loops
     private static final int EXAM_LENGTH = 10;
 
     public static void main (String [] args){
@@ -124,7 +122,7 @@ class ExamAnalysis {
 
     // This method analyzes a specific question by counting how many students selected each answer choice.
     // It returns a 3x6 matrix containing: row 0 = answer choices with asterisk for correct answer,
-    // row 1 = count of students for each choice, row 2 = percentage of students for each choice.
+    // rows 1 = count of students for each choice, row 2 = percentage of students for each choice.
     public static String[][] doQuestionAnalysis (String answers, ArrayList<String> examData, int questionNum) {
         String [][] matrix = new String [3][6];
         matrix[0] = new String[] {"A", "B", "C", "D", "E", "Blank"};
@@ -199,11 +197,11 @@ class ExamAnalysis {
         String[] header = new String[] { "Student #", "Correct", "Incorrect", "Blank" };
         System.out.println("-----------------------------------------------------");
         
-        // Print the header row with left alignment and specified widths
+        // Print the header row 
         System.out.printf("| %-10s | %-10s | %-10s | %-10s |%n", header[0], header[1], header[2], header[3]);
         System.out.println("-----------------------------------------------------");
 
-        // Print data rows using the same format specifier
+        // Print data rows
         for (String[] row : matrix) {
             System.out.printf("| %-10s | %-10s | %-10s | %-10s |%n", row[0], row[1], row[2], row[3]);
         }

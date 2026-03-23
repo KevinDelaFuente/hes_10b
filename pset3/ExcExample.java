@@ -1,10 +1,9 @@
-// Java program demonstrating exception handling with try-catch-finally blocks
+// This program demonstrates exception handling with try-catch-finally blocks
 // Tests how program flow changes when exceptions are thrown and caught
 
 class MyException extends Exception {}
 
 public class ExcExample {
-    // Main method tests exception handling by calling doRisky with command-line argument
     public static void main (String [] args){ 
         String test = args[0];
         System.out.print("t");
