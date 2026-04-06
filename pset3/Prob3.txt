@@ -1,0 +1,20 @@
+|   i   |   a.size()    |           a         |
+-------------------------------
+|       |       3       | [Now, Later, Ever]    
+|   0   |       4       | [Not, Now, Later, Ever]
+|   1   |       5       | [Not, Not, Now, Later, Ever]
+|   2   |       6       | [Not, Not, Not, Now, Later, Ever]
+|   3   |       7       | [Not, Not, Not, Not, Now, Later, Ever]   
+
+// it never ends because it keeps adding elements so a.size() will always be larger than i
+
+// We have to increase counter by 2 instead
+for (int i = 0; i < a.size(); i = i + 2) a.add (i, "NOT");
+
+|   i   |   a.size()    |           a         |
+-------------------------------
+|       |       3       | [Now, Later, Ever]    
+|   0   |       4       | [Not, Now, Later, Ever]
+|   2   |       5       | [Not, Now, Not, Later, Ever]
+|   4   |       6       | [Not, Now, Not, Later, Not, Ever]
+|   6   |       6       | >> Completes for loop 
