@@ -35,12 +35,14 @@
 // import java.lang.StringBuilder;
 import java.util.Scanner;
 
+import javax.swing.Action;
+
 public class CalcBackend {
 
     // Variables defining calculator's internal state
 
-    private enum State {FIRST_LEFT, FIRST_RIGHT, SECOND_FIRST, SECOND_LEFT, BINARY_OP, UNARY_OP, EQUALS, ERROR}
-    private enum LastButton { DIGIT, DECIMAL_POINT, EQUALS, BINARY_OPERATOR, UNARY_OPERATOR}
+    private enum State {READY_FIRST, READY_SECOND, CONSTRUCTING_OPERAND_LEFT, CONSTRUCTING_OPERAND_RIGHT};
+    private enum LastButton {DIGIT, DECIMAL_POINT, UNARY_OPERATOR, BINARY_OPERATOR, EQUALS, CLEAR};
     
     private State state; // State of calculator
     private LastButton lastButton; // Last button type pressed for state transitions
@@ -50,22 +52,44 @@ public class CalcBackend {
 
     // Zero-arg constructor initializes calculator's state
     public CalcBackend() {
-        this.state = State.FIRST_LEFT;
+        this.state = State.CONSTRUCTING_OPERAND_LEFT;
+        this.lastButton = LastButton.EQUALS;
         this.displayVal = 0.0;
         this.first_operand = 0.0;
         this.pendingOp = '\0'; 
     }
 
     // feedChar is called by GUI to tell CalcBackend that a particular button was clicked
+
+    // Transition logic
+    // State	            Input	    Action
+    // READY_FIRST	        digit	    reset displayVal, → CONSTRUCTING_OPERAND_LEFT
+    // READY_SECOND	        digit	    reset displayVal, → CONSTRUCTING_OPERAND_LEFT
+    // C.O_LEFT	            digit	    append
+    // C.O_LEFT	            .	        → C.O_RIGHT
+    // C.O_LEFT/RIGHT	    binary op	save displayVal→first_operand, save op, → READY_SECOND
+    // C.O_LEFT/RIGHT	    =	        compute first_operand pendingOp displayVal, → READY_FIRST
+
     public void feedChar(char c) {
         // Everytime feedChar is called, it must update the double value representing
         // what should currently be displayed in response to the clicked button. So the
         // CalcBackend "business logic" originates in feedChar.
-        if(state == State.FIRST_LEFT){
-            switch (state) {
-                case FIRST_LEFT -> firstLeft_x_Digit(c);
-                default -> setState(State.ERROR);
-        }
+        if(state == State.CONSTRUCTING_OPERAND_LEFT){
+            switch (inferLastButton(c)) {
+                case DIGIT -> constructingLeft_x_Digit(c);
+                case DECIMAL_POINT -> constructingLeft_x_DecimalPoint(c);
+                // case UNARY_OPERATOR -> constructingLeft_x_UnaryOperator(c);
+                case BINARY_OPERATOR -> constructingLeft_x_BinaryOperator(c);
+                // case EQUALS -> constructingLeft_x_Equals(c);
+                default -> { /* ignore */ }
+            }
+        } else if (state == State.READY_SECOND) {
+            switch (inferLastButton(c)) {
+                case DIGIT -> readySecond_x_Digit(c);
+                default -> { /* ignore */ }
+            }
+        } else if (inferLastButton(c) == LastButton.CLEAR) {
+            clear();
         }
         
 
@@ -84,7 +108,8 @@ public class CalcBackend {
         return displayString;
     }
 
-    private void firstLeft_x_Digit (char c) {
+    // CONSTRUCTING_OPERAND_LEFT state methods
+    private void constructingLeft_x_Digit (char c) {
         if(displayVal == 0.0 ) {
             displayVal = Character.getNumericValue(c);
         } else {
@@ -92,12 +117,68 @@ public class CalcBackend {
         }
     }
 
+    private void constructingLeft_x_DecimalPoint (char c) {
+        this.state = State.CONSTRUCTING_OPERAND_RIGHT;
+    }
+
+    private void constructingLeft_x_BinaryOperator (char c) {
+        this.first_operand = this.displayVal;
+        this.pendingOp = c;
+        this.state = State.READY_SECOND;
+    }
+
+    private void constructingLeft_x_UnaryOperator (char c) {
+    }
+
+    private void constructingLeft_x_Equals (char c) {
+        double result = switch (pendingOp) {
+            case '+' -> first_operand + displayVal;
+            case '-' -> first_operand - displayVal;
+            case '*' -> first_operand * displayVal;
+            case '/' -> first_operand / displayVal;
+            default -> displayVal; // No pending operation, just return current value
+        };
+        this.displayVal = result;
+        this.state = State.READY_FIRST;
+    }
+
+
+    // READY_FIRST state methods
+    private void readyFirst_x_Digit (char c) {
+        this.first_operand = 0.0;
+        this.displayVal = Character.getNumericValue(c);
+        this.state = State.CONSTRUCTING_OPERAND_LEFT;
+    }
+
+    // READY_SECOND state methods
+    private void readySecond_x_Digit (char c) {
+        this.displayVal = Character.getNumericValue(c);
+        this.state = State.CONSTRUCTING_OPERAND_LEFT;
+    }
+
+    private void readySecond_x_BinaryOperator (char c) {
+        this.pendingOp = c;
+    }
+
+
+
+
+
+
+
     public void setState(State state) {
         this.state = state;
     }
     
     public void setDisplayVal(double val) {
         this.displayVal = val;
+    }
+
+    public void clear() {
+        this.state = State.CONSTRUCTING_OPERAND_LEFT;
+        this.displayVal = 0.0;
+        this.first_operand = 0.0;
+        this.pendingOp = '\0';
     }
 
     public LastButton inferLastButton(char c) {
@@ -111,6 +192,8 @@ public class CalcBackend {
             return LastButton.BINARY_OPERATOR;
         } else if (c == '\u221A') {
             return LastButton.UNARY_OPERATOR;
+        } else if (c == 'C' || c == 'c') {
+            return LastButton.CLEAR;
         } else {
             return null; // Invalid character
         }
