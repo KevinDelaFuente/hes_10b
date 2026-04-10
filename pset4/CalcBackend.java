@@ -32,7 +32,7 @@
 // calculator's JFrame, attach listeners, feed button clicks to CalcBackend via feedChar
 // and then update the calculator's display via getDisplayVal.
 
-// import java.lang.StringBuilder;
+
 import java.util.Scanner;
 
 import javax.swing.Action;
@@ -45,59 +45,90 @@ public class CalcBackend {
     private enum LastButton {DIGIT, DECIMAL_POINT, UNARY_OPERATOR, BINARY_OPERATOR, EQUALS, CLEAR};
     
     private State state; // State of calculator
-    private LastButton lastButton; // Last button type pressed for state transitions
+    // private LastButton lastButton; // Last button type pressed for state transitions. Needed?            
     private double displayVal; // Always contains double value matching GUI's display
     private double first_operand; // Stores first operand for binary operations
     private char pendingOp; // Stores pending binary operation, if any
+    private int decimalPlaces; // Keeps track of decimal places 
 
     // Zero-arg constructor initializes calculator's state
     public CalcBackend() {
         this.state = State.CONSTRUCTING_OPERAND_LEFT;
-        this.lastButton = LastButton.EQUALS;
+        // this.lastButton = LastButton.EQUALS;
         this.displayVal = 0.0;
         this.first_operand = 0.0;
         this.pendingOp = '\0'; 
+        this.decimalPlaces = 0;
     }
 
-    // feedChar is called by GUI to tell CalcBackend that a particular button was clicked
 
-    // Transition logic
-    // State	            Input	    Action
-    // READY_FIRST	        digit	    reset displayVal, → CONSTRUCTING_OPERAND_LEFT
-    // READY_SECOND	        digit	    reset displayVal, → CONSTRUCTING_OPERAND_LEFT
-    // C.O_LEFT	            digit	    append
-    // C.O_LEFT	            .	        → C.O_RIGHT
-    // C.O_LEFT/RIGHT	    binary op	save displayVal→first_operand, save op, → READY_SECOND
-    // C.O_LEFT/RIGHT	    =	        compute first_operand pendingOp displayVal, → READY_FIRST
+    // +++++++++++++++++++++++++++++++++++++++
+    // TRANSITION LOGIC
+    // +++++++++++++++++++++++++++++++++++++++
+    // State	                    Input	        Action
+    // ----------------------      -----------     --------------------------------------------------
+    // ANY                         C               clear(), reset all to initial state
+    //
+    // CONSTRUCTING_OPERAND_LEFT   digit           append digit (multiply by 10 + digit)
+    // CONSTRUCTING_OPERAND_LEFT   .               reset decimalPlaces, → CONSTRUCTING_OPERAND_RIGHT
+    // CONSTRUCTING_OPERAND_LEFT   binary op       save displayVal→first_operand, save op, → READY_SECOND
+    //                                             (if pendingOp exists: compute first, then save new op)
+    // CONSTRUCTING_OPERAND_LEFT   =               compute first_operand pendingOp displayVal, → READY_FIRST
+    //
+    // CONSTRUCTING_OPERAND_RIGHT  digit           append decimal digit (increment decimalPlaces)
+    // CONSTRUCTING_OPERAND_RIGHT  binary op       save displayVal→first_operand, save op, → READY_SECOND
+    //                                             (if pendingOp exists: compute first, then save new op)
+    // CONSTRUCTING_OPERAND_RIGHT  =               compute first_operand pendingOp displayVal, → READY_FIRST
+    //
+    // READY_FIRST                 digit           reset first_operand & decimalPlaces, set displayVal, → CONSTRUCTING_OPERAND_LEFT
+    // READY_FIRST                 binary op       save displayVal→first_operand, save op, → READY_SECOND
+    // READY_FIRST                 =               compute displayVal pendingOp displayVal, → READY_FIRST
+    //
+    // READY_SECOND                digit           set displayVal to digit, reset decimalPlaces, → CONSTRUCTING_OPERAND_LEFT
+    // READY_SECOND                binary op       change pendingOp to new operator (stay in READY_SECOND)
 
     public void feedChar(char c) {
-        // Everytime feedChar is called, it must update the double value representing
-        // what should currently be displayed in response to the clicked button. So the
-        // CalcBackend "business logic" originates in feedChar.
-        if(state == State.CONSTRUCTING_OPERAND_LEFT){
+        if(inferLastButton(c) == LastButton.CLEAR) {
+            clear();
+        } else if(state == State.CONSTRUCTING_OPERAND_LEFT){
             switch (inferLastButton(c)) {
                 case DIGIT -> constructingLeft_x_Digit(c);
                 case DECIMAL_POINT -> constructingLeft_x_DecimalPoint(c);
-                // case UNARY_OPERATOR -> constructingLeft_x_UnaryOperator(c);
+                case UNARY_OPERATOR -> constructingLeft_x_UnaryOperator(c);
                 case BINARY_OPERATOR -> constructingLeft_x_BinaryOperator(c);
-                // case EQUALS -> constructingLeft_x_Equals(c);
+                case EQUALS -> constructingLeft_x_Equals();
+                default -> { /* ignore */ }
+            }
+        } else if (state == State.CONSTRUCTING_OPERAND_RIGHT) {
+            switch (inferLastButton(c)) {
+                case DIGIT -> constructingRight_x_Digit(c);
+                case UNARY_OPERATOR -> constructingRight_x_UnaryOperator(c);
+                case BINARY_OPERATOR -> constructingRight_x_BinaryOperator(c);
+                case EQUALS -> constructingRight_x_Equals();
+                default -> { /* ignore */ } // ignoring case DECIMAL_POINT since it doesn't apply in this state
+            }
+        } else if (state == State.READY_FIRST) {
+            switch (inferLastButton(c)) {
+                case DIGIT -> readyFirst_x_Digit(c);
+                case DECIMAL_POINT -> readyFirst_x_DecimalPoint(c);
+                case BINARY_OPERATOR -> readyFirst_x_BinaryOperator(c);
+                case EQUALS -> readyFirst_x_Equals();
                 default -> { /* ignore */ }
             }
         } else if (state == State.READY_SECOND) {
             switch (inferLastButton(c)) {
                 case DIGIT -> readySecond_x_Digit(c);
+                case BINARY_OPERATOR -> readySecond_x_BinaryOperator(c);
+                // case EQUALS -> readySecond_x_Equals();
+                
                 default -> { /* ignore */ }
             }
-        } else if (inferLastButton(c) == LastButton.CLEAR) {
-            clear();
         }
         
 
 
     }
 
-    // getDisplayVal is called by GUI right after GUI called feedChar,
-    // to get the String that the GUI should display.
     public String getDisplayVal() {
         String displayString = "" + this.displayVal;
         
@@ -108,7 +139,10 @@ public class CalcBackend {
         return displayString;
     }
 
+    // +++++++++++++++++++++++++++++++++++++++
     // CONSTRUCTING_OPERAND_LEFT state methods
+    // +++++++++++++++++++++++++++++++++++++++
+     
     private void constructingLeft_x_Digit (char c) {
         if(displayVal == 0.0 ) {
             displayVal = Character.getNumericValue(c);
@@ -119,18 +153,26 @@ public class CalcBackend {
 
     private void constructingLeft_x_DecimalPoint (char c) {
         this.state = State.CONSTRUCTING_OPERAND_RIGHT;
+        this.decimalPlaces = 0;
     }
 
     private void constructingLeft_x_BinaryOperator (char c) {
-        this.first_operand = this.displayVal;
-        this.pendingOp = c;
-        this.state = State.READY_SECOND;
+        if(pendingOp == '\0') { // If there is no pending operation, just save the current value and operator
+            this.first_operand = this.displayVal;
+            this.pendingOp = c;
+            this.state = State.READY_SECOND;
+        } else { // this is more in case of chaining operations, I want to keep the binary structure so we just make it as if pressed '='
+            constructingLeft_x_Equals();
+            this.first_operand = this.displayVal;
+            this.pendingOp = c;
+            this.state = State.READY_SECOND;
+        }
     }
 
     private void constructingLeft_x_UnaryOperator (char c) {
     }
 
-    private void constructingLeft_x_Equals (char c) {
+    private void constructingLeft_x_Equals () {
         double result = switch (pendingOp) {
             case '+' -> first_operand + displayVal;
             case '-' -> first_operand - displayVal;
@@ -142,18 +184,78 @@ public class CalcBackend {
         this.state = State.READY_FIRST;
     }
 
+    // +++++++++++++++++++++++++++++++++++++++
+    // CONSTRUCTING_OPERAND_RIGHT state methods
+    // +++++++++++++++++++++++++++++++++++++++
 
+    private void constructingRight_x_Digit (char c) {
+        decimalPlaces++;
+        displayVal += (double) Character.getNumericValue(c) / Math.pow(10, decimalPlaces);
+    }
+    
+    private void constructingRight_x_UnaryOperator (char c) {
+    }
+
+    private void constructingRight_x_BinaryOperator (char c) {
+        if(pendingOp == '\0') { // If there is no pending operation, just save the current value and operator
+            this.first_operand = this.displayVal;
+            this.pendingOp = c;
+            this.state = State.READY_SECOND;
+        } else { // this is more in case of chaining operations, I want to keep the binary structure so we just make it as if pressed '='
+            constructingRight_x_Equals();
+            this.first_operand = this.displayVal;
+            this.pendingOp = c;
+            this.state = State.READY_SECOND;
+        }
+    }
+
+    private void constructingRight_x_Equals () {
+        double result = switch (pendingOp) {
+            case '+' -> first_operand + displayVal;
+            case '-' -> first_operand - displayVal;
+            case '*' -> first_operand * displayVal;
+            case '/' -> first_operand / displayVal;
+            default -> displayVal; // No pending operation, just return current value
+        };
+        this.displayVal = result;
+        this.state = State.READY_FIRST;
+    }
+    // +++++++++++++++++++++++++++++++++++++++
     // READY_FIRST state methods
+    // +++++++++++++++++++++++++++++++++++++++
+
     private void readyFirst_x_Digit (char c) {
         this.first_operand = 0.0;
         this.displayVal = Character.getNumericValue(c);
         this.state = State.CONSTRUCTING_OPERAND_LEFT;
+        this.decimalPlaces = 0;
     }
 
+    private void readyFirst_x_DecimalPoint (char c) {
+        this.first_operand = 0.0;
+        this.displayVal = 0.0;
+        this.state = State.CONSTRUCTING_OPERAND_RIGHT;
+        this.decimalPlaces = 0;
+    }
+
+    private void readyFirst_x_BinaryOperator (char c){
+        this.first_operand = this.displayVal;
+        this.pendingOp = c;
+        this.state = State.READY_SECOND;
+    }
+    private void readyFirst_x_Equals () {
+        constructingLeft_x_Equals();
+    }
+
+
+    // +++++++++++++++++++++++++++++++++++++++
     // READY_SECOND state methods
+    // +++++++++++++++++++++++++++++++++++++++
+    
     private void readySecond_x_Digit (char c) {
         this.displayVal = Character.getNumericValue(c);
         this.state = State.CONSTRUCTING_OPERAND_LEFT;
+        this.decimalPlaces = 0;
     }
 
     private void readySecond_x_BinaryOperator (char c) {
@@ -179,6 +281,7 @@ public class CalcBackend {
         this.displayVal = 0.0;
         this.first_operand = 0.0;
         this.pendingOp = '\0';
+        this.decimalPlaces = 0;
     }
 
     public LastButton inferLastButton(char c) {
@@ -204,7 +307,7 @@ public class CalcBackend {
 
 }
 
-class backedTest {
+class backendTest {
     public static void main (String [] args){
         Scanner keyboard = new Scanner(System.in);
         CalcBackend backend = new CalcBackend();
