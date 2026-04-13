@@ -35,8 +35,10 @@
 
 import java.util.Scanner;
 
-import javax.swing.Action;
 
+
+// Manages calculator math logic via a state machine. GUI feeds button clicks
+// through feedChar() and reads the display value via getDisplayVal().
 public class CalcBackend {
 
     // Variables defining calculator's internal state
@@ -72,21 +74,27 @@ public class CalcBackend {
     // CONSTRUCTING_OPERAND_LEFT   digit           append digit (multiply by 10 + digit)
     // CONSTRUCTING_OPERAND_LEFT   .               reset decimalPlaces, → CONSTRUCTING_OPERAND_RIGHT
     // CONSTRUCTING_OPERAND_LEFT   binary op       save displayVal→first_operand, save op, → READY_SECOND
-    //                                             (if pendingOp exists: compute first, then save new op)
+    // CONSTRUCTING_OPERAND_LEFT   unary op        apply op (sqrt) to displayVal, → READY_FIRST
     // CONSTRUCTING_OPERAND_LEFT   =               compute first_operand pendingOp displayVal, → READY_FIRST
     //
     // CONSTRUCTING_OPERAND_RIGHT  digit           append decimal digit (increment decimalPlaces)
     // CONSTRUCTING_OPERAND_RIGHT  binary op       save displayVal→first_operand, save op, → READY_SECOND
-    //                                             (if pendingOp exists: compute first, then save new op)
+    // CONSTRUCTING_OPERAND_RIGHT  unary op        apply op (sqrt) to displayVal, → READY_FIRST
     // CONSTRUCTING_OPERAND_RIGHT  =               compute first_operand pendingOp displayVal, → READY_FIRST
     //
     // READY_FIRST                 digit           reset first_operand & decimalPlaces, set displayVal, → CONSTRUCTING_OPERAND_LEFT
+    // READY_FIRST                 .               reset first_operand, displayVal=0, → CONSTRUCTING_OPERAND_RIGHT
+    // READY_FIRST                 unary op        apply op to displayVal (e.g. √), stay in READY_FIRST
     // READY_FIRST                 binary op       save displayVal→first_operand, save op, → READY_SECOND
-    // READY_FIRST                 =               compute displayVal pendingOp displayVal, → READY_FIRST
+    // READY_FIRST                 =               compute first_operand pendingOp displayVal, → READY_FIRST
     //
     // READY_SECOND                digit           set displayVal to digit, reset decimalPlaces, → CONSTRUCTING_OPERAND_LEFT
+    // READY_SECOND                .               set displayVal=0, reset decimalPlaces, → CONSTRUCTING_OPERAND_RIGHT
+    // READY_SECOND                unary op        apply op to first_operand display, → READY_SECOND (stay)
     // READY_SECOND                binary op       change pendingOp to new operator (stay in READY_SECOND)
+    // READY_SECOND                =               stay put (no second operand entered yet)
 
+    // Routes each button press to the correct handler based on current state.
     public void feedChar(char c) {
         if(inferLastButton(c) == LastButton.CLEAR) {
             clear();
@@ -111,6 +119,7 @@ public class CalcBackend {
             switch (inferLastButton(c)) {
                 case DIGIT -> readyFirst_x_Digit(c);
                 case DECIMAL_POINT -> readyFirst_x_DecimalPoint(c);
+                case UNARY_OPERATOR -> readyFirst_x_UnaryOperator(c);
                 case BINARY_OPERATOR -> readyFirst_x_BinaryOperator(c);
                 case EQUALS -> readyFirst_x_Equals();
                 default -> { /* ignore */ }
@@ -118,8 +127,10 @@ public class CalcBackend {
         } else if (state == State.READY_SECOND) {
             switch (inferLastButton(c)) {
                 case DIGIT -> readySecond_x_Digit(c);
+                case DECIMAL_POINT -> readySecond_x_DecimalPoint(c);
+                case UNARY_OPERATOR -> readySecond_x_UnaryOperator(c);
                 case BINARY_OPERATOR -> readySecond_x_BinaryOperator(c);
-                // case EQUALS -> readySecond_x_Equals();
+                case EQUALS -> readySecond_x_Equals();
                 
                 default -> { /* ignore */ }
             }
@@ -143,6 +154,7 @@ public class CalcBackend {
     // CONSTRUCTING_OPERAND_LEFT state methods
     // +++++++++++++++++++++++++++++++++++++++
      
+    // Appends digit to the left side of the current number.
     private void constructingLeft_x_Digit (char c) {
         if(displayVal == 0.0 ) {
             displayVal = Character.getNumericValue(c);
@@ -151,11 +163,13 @@ public class CalcBackend {
         }
     }
 
+    // Switches to decimal entry mode.
     private void constructingLeft_x_DecimalPoint (char c) {
         this.state = State.CONSTRUCTING_OPERAND_RIGHT;
         this.decimalPlaces = 0;
     }
 
+    // Saves current value and operator; computes pending op first if one exists (chaining).
     private void constructingLeft_x_BinaryOperator (char c) {
         if(pendingOp == '\0') { // If there is no pending operation, just save the current value and operator
             this.first_operand = this.displayVal;
@@ -169,9 +183,20 @@ public class CalcBackend {
         }
     }
 
+    // Applies unary operator (sqrt) to displayVal.
     private void constructingLeft_x_UnaryOperator (char c) {
+        if (c == '\u221A') {
+            try {
+                this.displayVal = Math.sqrt(this.displayVal);
+            } catch (ArithmeticException e) {
+                // Handle the exception, e.g., set displayVal to NaN or show an error message
+                this.displayVal = Double.NaN;
+            }
+            this.state = State.READY_FIRST;
+        }
     }
 
+    // Computes first_operand pendingOp displayVal and stores result.
     private void constructingLeft_x_Equals () {
         double result = switch (pendingOp) {
             case '+' -> first_operand + displayVal;
@@ -181,6 +206,8 @@ public class CalcBackend {
             default -> displayVal; // No pending operation, just return current value
         };
         this.displayVal = result;
+        this.first_operand = 0.0; // Clear first operand after computation
+        this.pendingOp = '\0'; // Clear pending operation after computation
         this.state = State.READY_FIRST;
     }
 
@@ -188,14 +215,26 @@ public class CalcBackend {
     // CONSTRUCTING_OPERAND_RIGHT state methods
     // +++++++++++++++++++++++++++++++++++++++
 
+    // Appends digit to the right (decimal) side of the current number.
     private void constructingRight_x_Digit (char c) {
         decimalPlaces++;
         displayVal += (double) Character.getNumericValue(c) / Math.pow(10, decimalPlaces);
     }
     
+    // Applies unary operator (sqrt) to displayVal.
     private void constructingRight_x_UnaryOperator (char c) {
+        if (c == '\u221A') {
+            try {
+                this.displayVal = Math.sqrt(this.displayVal);
+            } catch (ArithmeticException e) {
+                // Handle the exception, e.g., set displayVal to NaN or show an error message
+                this.displayVal = Double.NaN;
+            }
+            this.state = State.READY_FIRST;
+        }
     }
 
+    // Saves current value and operator; computes pending op first if one exists (chaining).
     private void constructingRight_x_BinaryOperator (char c) {
         if(pendingOp == '\0') { // If there is no pending operation, just save the current value and operator
             this.first_operand = this.displayVal;
@@ -209,6 +248,7 @@ public class CalcBackend {
         }
     }
 
+    // Computes first_operand pendingOp displayVal and stores result.
     private void constructingRight_x_Equals () {
         double result = switch (pendingOp) {
             case '+' -> first_operand + displayVal;
@@ -218,12 +258,15 @@ public class CalcBackend {
             default -> displayVal; // No pending operation, just return current value
         };
         this.displayVal = result;
+        this.first_operand = 0.0; // Clear first operand after computation
+        this.pendingOp = '\0'; // Clear pending operation after computation
         this.state = State.READY_FIRST;
     }
     // +++++++++++++++++++++++++++++++++++++++
     // READY_FIRST state methods
     // +++++++++++++++++++++++++++++++++++++++
 
+    // Resets and starts a new first operand from this digit.
     private void readyFirst_x_Digit (char c) {
         this.first_operand = 0.0;
         this.displayVal = Character.getNumericValue(c);
@@ -231,6 +274,7 @@ public class CalcBackend {
         this.decimalPlaces = 0;
     }
 
+    // Resets and begins a decimal-first operand (e.g. ".5").
     private void readyFirst_x_DecimalPoint (char c) {
         this.first_operand = 0.0;
         this.displayVal = 0.0;
@@ -238,11 +282,25 @@ public class CalcBackend {
         this.decimalPlaces = 0;
     }
 
+    // Applies unary operator (sqrt) to displayVal; stays in READY_FIRST.
+    private void readyFirst_x_UnaryOperator (char c) {
+        if (c == '\u221A') {
+            try {
+                this.displayVal = Math.sqrt(this.displayVal);
+            } catch (ArithmeticException e) {
+                // Handle the exception, e.g., set displayVal to NaN or show an error message
+                this.displayVal = Double.NaN;
+            }
+            // Stay in READY_FIRST since we can chain unary operations
+        }
+    }
+    // Saves result as first operand and records the operator.
     private void readyFirst_x_BinaryOperator (char c){
         this.first_operand = this.displayVal;
         this.pendingOp = c;
         this.state = State.READY_SECOND;
     }
+    // Re-evaluates using the stored operator (handles repeated '=').
     private void readyFirst_x_Equals () {
         constructingLeft_x_Equals();
     }
@@ -252,31 +310,47 @@ public class CalcBackend {
     // READY_SECOND state methods
     // +++++++++++++++++++++++++++++++++++++++
     
+    // Resets display to this digit and begins second operand entry.
     private void readySecond_x_Digit (char c) {
         this.displayVal = Character.getNumericValue(c);
         this.state = State.CONSTRUCTING_OPERAND_LEFT;
         this.decimalPlaces = 0;
     }
 
+    // Resets display to 0 and begins decimal second operand entry.
+    private void readySecond_x_DecimalPoint (char c) {
+        this.displayVal = 0.0;
+        this.state = State.CONSTRUCTING_OPERAND_RIGHT;
+        this.decimalPlaces = 0;
+    }
+
+    // Applies unary operator (sqrt) to the displayed first operand.
+    private void readySecond_x_UnaryOperator (char c) {
+        if (c == '\u221A') {
+            try {
+                this.displayVal = Math.sqrt(this.displayVal);
+            } catch (ArithmeticException e) {
+                // Handle the exception, e.g., set displayVal to NaN or show an error message
+                this.displayVal = Double.NaN;
+            }
+            this.state = State.READY_FIRST; // After applying unary operator, we go back to READY_FIRST
+        }
+    }
+    // Replaces the pending operator without changing operands.
     private void readySecond_x_BinaryOperator (char c) {
         this.pendingOp = c;
     }
 
-
-
-
-
-
-
-    public void setState(State state) {
-        this.state = state;
-    }
-    
-    public void setDisplayVal(double val) {
-        this.displayVal = val;
+    // No second operand entered yet; nothing to compute.
+    private void readySecond_x_Equals () {
+        
     }
 
-    public void clear() {
+// ========================================
+// UTILITY METHODS
+// ========================================
+
+    private void clear() {
         this.state = State.CONSTRUCTING_OPERAND_LEFT;
         this.displayVal = 0.0;
         this.first_operand = 0.0;
@@ -284,7 +358,7 @@ public class CalcBackend {
         this.decimalPlaces = 0;
     }
 
-    public LastButton inferLastButton(char c) {
+    private LastButton inferLastButton(char c) {
         if (Character.isDigit(c)) {
             return LastButton.DIGIT;
         } else if (c == '.') {
@@ -302,48 +376,49 @@ public class CalcBackend {
         }
         
     }
-
-
-
 }
 
-class backendTest {
-    public static void main (String [] args){
-        Scanner keyboard = new Scanner(System.in);
-        CalcBackend backend = new CalcBackend();
+
+// This class is debugger for CalcBackend by simulating button presses via the console. 
+// It will print the display value after each input.
+
+// class backendTest {
+//     public static void main (String [] args){
+//         Scanner keyboard = new Scanner(System.in);
+//         CalcBackend backend = new CalcBackend();
         
-        System.out.println("=== Calculator Backend Tester ===");
-        System.out.println("Enter characters one at a time (or 'q' to quit)");
-        System.out.println("Special: type 'sqrt' for √ symbol");
-        System.out.println();
-        System.out.println("Display: " + backend.getDisplayVal());
+//         System.out.println("=== Calculator Backend Tester ===");
+//         System.out.println("Enter characters one at a time (or 'q' to quit)");
+//         System.out.println("Special: type 'sqrt' for √ symbol");
+//         System.out.println();
+//         System.out.println("Display: " + backend.getDisplayVal());
         
-        while (true) {
-            System.out.print("Input: ");
-            String input = keyboard.nextLine();
+//         while (true) {
+//             System.out.print("Input: ");
+//             String input = keyboard.nextLine();
             
-            if (input.equals("q") || input.equals("quit")) {
-                System.out.println("Exiting...");
-                break;
-            }
+//             if (input.equals("q") || input.equals("quit")) {
+//                 System.out.println("Exiting...");
+//                 break;
+//             }
             
-            char c;
-            if (input.equals("sqrt")) {
-                c = '\u221A';
-            } else if (input.length() > 0) {
-                c = input.charAt(0);
-            } else {
-                continue;
-            }
+//             char c;
+//             if (input.equals("sqrt")) {
+//                 c = '\u221A';
+//             } else if (input.length() > 0) {
+//                 c = input.charAt(0);
+//             } else {
+//                 continue;
+//             }
             
-            backend.feedChar(c);
-            System.out.println("Display: " + backend.getDisplayVal());
-            System.out.println();
-        }
+//             backend.feedChar(c);
+//             System.out.println("Display: " + backend.getDisplayVal());
+//             System.out.println();
+//         }
         
-        keyboard.close();
-    }
-}
+//         keyboard.close();
+//     }
+// }
 
 
     
