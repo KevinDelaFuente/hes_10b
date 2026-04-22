@@ -360,17 +360,26 @@ class Bitset
      *  A methods to calculate a set cardinality
      * 
      * @return        The number of elements in the set
-    
     */
 
     public int cardinality (){
         int cardinality = 0;
         for (int i = 0; i < this.maxSize; i++){
-                if(getBit(i)){
+                if(member(i)){
                     cardinality++;
             }
         }
         return cardinality;
+    }
+
+    /**
+     *  This method tests if the current Bitset is a subset of another Bitset.
+     *
+     *  @param   setX   The Bitset to test against
+     *  @return         True if the current Bitset is a subset of setX, false otherwise
+     */
+    public boolean isSubset (Bitset setX){
+        return setX.equals(this.union(setX));
     }
     
 }

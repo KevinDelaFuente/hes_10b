@@ -18,6 +18,7 @@ public class TestSets
      System.out.print ("Type 4 to CREATE UNION (A + B)\n");
      System.out.print ("Type 5 to CREATE DIFFERENCE (A - B)\n");
      System.out.print ("Type 6 to CALCULATE CARDINALITY\n");
+     System.out.print ("Type 7 to evaluate isSubset()\n");
      System.out.print ("Type any OTHER # to EXIT PROGRAM \n\n");
      System.out.print ("Command: ");
   }
@@ -68,10 +69,15 @@ public class TestSets
               System.out.println ("     Cardinality of SET A = " + setA.cardinality());
               System.out.println ("     Cardinality of SET B = " + setB.cardinality());
               break;
+            
+           case 7:
+              System.out.println ("     is SET A a subset of SET B: " + setA.isSubset(setB));
+              System.out.println ("     is SET B a subset of SET A: " + setB.isSubset(setA));
+              break;
 
            default:  System.exit(0);
         
          }
-       } while (command > 0 && command < 6);
+       } while (command > 0 && command < 8);
   }
 }
