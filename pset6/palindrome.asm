@@ -1,5 +1,4 @@
 ## palindrome.asm -- reads a line of text and tests whether it is a palindrome.
-## Added two subroutines to ignore non-alphanumeric characters and case differences.
 ## Register usage:
 ##	$t1	- A.
 ##	$t2	- B.
